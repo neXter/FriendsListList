@@ -1,7 +1,7 @@
--- FriendsListList 1.1.0 – minimalistische Online-Freundesliste für WoW Forever (Interface 16001)
+-- FriendsListList 1.2.0 – minimalistische Online-Freundesliste für WoW Forever (Interface 16001)
 -- Autor: neXter
 local ADDON = ...
-local VERSION = "1.1.0"
+local VERSION = "1.2.0"
 local TAG = "|cff3FB8AFFLL|r"
 
 -- Lokalisierung -----------------------------------------------------------
@@ -24,6 +24,9 @@ local EN = {
   HELP4 = "  /fll debug  –  toggle debug output in chat",
   HELP5 = "  /fll dump  –  print raw data of all online friends (for bug reports)",
   HELP6 = "  /fll icon <n>  –  choose faction icon variant",
+  HELP7 = "  /fll names  –  friend names: BattleTag or name as shown in game",
+  NAMES_BT = "Friend names: BattleTag.",
+  NAMES_GAME = "Friend names: as shown in game (hidden names fall back to BattleTag).",
   NOTE = "Note",
 }
 local DE = {
@@ -44,6 +47,9 @@ local DE = {
   HELP4 = "  /fll debug  –  Debug-Ausgabe im Chat ein/aus",
   HELP5 = "  /fll dump  –  Rohdaten aller Online-Freunde ausgeben (für Fehlerberichte)",
   HELP6 = "  /fll icon <n>  –  Variante des Fraktions-Icons wählen",
+  HELP7 = "  /fll names  –  Freundesnamen: BattleTag oder Name wie im Spiel",
+  NAMES_BT = "Freundesnamen: BattleTag.",
+  NAMES_GAME = "Freundesnamen: wie im Spiel (versteckte Namen werden zum BattleTag).",
   NOTE = "Notiz",
 }
 local L = IS_DE and setmetatable(DE, { __index = EN }) or EN
@@ -60,6 +66,7 @@ local DEFAULTS = {
   locked = true,
   showCharFriends = false,
   debug = false,  -- Debug-Ausgabe im Chat: /fll debug
+  nameMode = "game",      -- "game" (Name wie im Spiel) oder "battletag" (/fll names)
   icon = 0,       -- 0 = automatisch
   point = "CENTER", relPoint = "CENTER", x = 0, y = 0,
 }
@@ -164,17 +171,58 @@ local function ParseRealmType(rich)
   return nil
 end
 
--- accountName kann leer oder "???" sein (Freund ohne RealID-Namen): dann BattleTag ohne #Nummer
+-- Der Realm-Typ steht oft auch im Realm-Namen, z. B. "CAMWOW EU5 Realm 3 PvE".
+local REALM_NAME_TOKENS = { "RP-PVP", "RP-PVE", "RPPVP", "RPPVE", "PVP", "PVE", "RP" }
+
+local function ParseRealmTypeFromName(realm)
+  if not realm or realm == "" then return nil end
+  local up = realm:upper()
+  for _, token in ipairs(REALM_NAME_TOKENS) do
+    local s, e = up:find(token, 1, true)
+    while s do
+      local before = s == 1 and " " or up:sub(s - 1, s - 1)
+      local after = e == #up and " " or up:sub(e + 1, e + 1)
+      if not before:match("%w") and not after:match("%w") then return realm:sub(s, e) end
+      s, e = up:find(token, e + 1, true)
+    end
+  end
+  return nil
+end
+
+-- accountName ist ein geschützter Token (|K...|k), den der Client erst beim Anzeigen auflöst.
+-- Bei Freunden ohne RealID wird daraus "???". Dann zeigen wir den BattleTag ohne #Nummer.
 local function UsableName(name)
   if name and name ~= "" and name ~= "???" then return name end
   return nil
 end
 
+local measureFS
+local function TextWidth(text)
+  if not measureFS then
+    measureFS = CreateFrame("Frame"):CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    measureFS:SetAlpha(0)
+  end
+  measureFS:SetText(text)
+  return measureFS:GetStringWidth()
+end
+
+-- true, wenn der Name beim Anzeigen als "???" erscheint
+local function IsHiddenName(name)
+  if not UsableName(name) then return true end
+  return math.abs(TextWidth(name) - TextWidth("???")) < 0.5
+end
+
+-- Der Name ist ein geschützter Token, den der Client in der Liste zum echten Namen auflöst
+-- (im Chat-Log erscheint er dagegen als "???").
+-- nameMode "game" (Standard): Token für RealID-Freunde, BattleTag ohne #Nummer für reine BattleTag-Freunde.
+-- nameMode "battletag": immer der BattleTag ohne #Nummer.
 local function FriendName(acc)
-  local name = UsableName(acc.accountName)
-  if name then return name end
-  local short = acc.battleTag and acc.battleTag:match("^([^#]+)")
-  return UsableName(short)
+  local short = UsableName(acc.battleTag and acc.battleTag:match("^([^#]+)"))
+  if db.nameMode == "battletag" then return short or UsableName(acc.accountName) end
+  if acc.isBattleTagFriend or IsHiddenName(acc.accountName) then
+    return short or UsableName(acc.accountName)
+  end
+  return acc.accountName
 end
 
 local function CollectBNet(out, stats)
@@ -215,19 +263,24 @@ local function CollectBNet(out, stats)
                 local rich = ga.richPresence
                 if rich and rich ~= "" then area = rich:match("([^%-]+)%s*$") or rich; area = area:gsub("^%s+", "") end
               end
+              local friend = FriendName(acc)
+              local realm = UsableName(ga.realmDisplayName) or UsableName(ga.realmName)
               out[#out + 1] = {
                 game = game,
-                friend = FriendName(acc),
-                sortName = Lower(FriendName(acc) or acc.battleTag),
+                friend = friend,
+                -- Sortierung nach BattleTag: der echte Name ist ein geschützter Token und nicht sortierbar
+                sortName = Lower(acc.battleTag or friend),
                 bnetName = UsableName(acc.accountName) or acc.battleTag,
                 battleTag = acc.battleTag,
+                btFriend = acc.isBattleTagFriend,
+                acctRaw = (tostring(acc.accountName):gsub("|", "||")),
                 char = ga.characterName,
                 level = tonumber(ga.characterLevel),
                 class = ga.className,
                 faction = ga.factionName,
                 area = area,
-                realm = UsableName(ga.realmDisplayName) or UsableName(ga.realmName),
-                realmType = ParseRealmType(ga.richPresence),
+                realm = realm,
+                realmType = ParseRealmType(ga.richPresence) or ParseRealmTypeFromName(realm),
                 note = acc.note,
                 pid = pid,
               }
@@ -358,6 +411,18 @@ local function RowText(e)
   return table.concat(parts, " ")
 end
 
+-- Farben der Realm-Typen im Tooltip: PvE grün, PvP rot, RP-PvE dunkelgrün, RP-PvP dunkelrot
+local REALM_TYPE_COLORS = {
+  ["PVE"] = "|cff33dd33", ["PVP"] = "|cffff3333",
+  ["RP-PVE"] = "|cff1f9a1f", ["RPPVE"] = "|cff1f9a1f", ["RP"] = "|cff1f9a1f", -- RP = RP-PvE
+  ["RP-PVP"] = "|cffa81c1c", ["RPPVP"] = "|cffa81c1c",
+}
+
+local function RealmTypeHex(realmType)
+  local norm = realmType:gsub("%s", ""):upper()
+  return REALM_TYPE_COLORS[norm] or "|cff99ccff"
+end
+
 local function ShowTooltip(row)
   local e = row.entry
   if not e then return end
@@ -366,10 +431,12 @@ local function ShowTooltip(row)
   if e.area and e.area ~= "" then GameTooltip:AddLine(e.area, 0.8, 0.8, 0.8) end
   -- Retail-Freunde: Servername (+ Typ), Forever-Freunde: nur Realm-Typ
   local server = e.game == "R" and e.realm or nil
+  local typeText = e.realmType and (RealmTypeHex(e.realmType) .. e.realmType .. "|r") or nil
   local serverLine
-  if server and e.realmType then serverLine = server .. " (" .. e.realmType .. ")"
-  else serverLine = server or e.realmType end
-  if serverLine then GameTooltip:AddLine(serverLine, 0.6, 0.8, 1) end
+  if server and typeText then serverLine = "|cff99ccff" .. server .. "|r (" .. typeText .. ")"
+  elseif server then serverLine = "|cff99ccff" .. server .. "|r"
+  else serverLine = typeText end
+  if serverLine then GameTooltip:AddLine(serverLine, 1, 1, 1) end
   if e.note and e.note ~= "" then GameTooltip:AddLine(e.note, 1, 0.82, 0, true) end
   GameTooltip:Show()
 end
@@ -438,10 +505,10 @@ end
 local lastSignature
 
 local function DescribeEntry(e)
-  return string.format("  %s %s (%s) | char=%s lvl=%s class=%s faction=%s area=%s realm=%s type=%s pid=%s note=%s",
+  return string.format("  %s %s (%s) | char=%s lvl=%s class=%s faction=%s area=%s realm=%s type=%s pid=%s note=%s btFriend=%s acct=%s",
     e.game, tostring(e.friend or "-"), tostring(e.battleTag or "-"), tostring(e.char), tostring(e.level), tostring(e.class),
     tostring(e.faction), tostring(e.area), tostring(e.realm), tostring(e.realmType), tostring(e.pid),
-    (e.note and e.note ~= "") and "yes" or "no")
+    (e.note and e.note ~= "") and "yes" or "no", tostring(e.btFriend), tostring(e.acctRaw))
 end
 
 local function DoRefresh()
@@ -497,6 +564,7 @@ local function DebugBanner()
     Has(ChatFrame_SendBNetTell or (ChatFrameUtil and ChatFrameUtil.SendBNetTell)),
     Has(ChatFrame_SendTell or (ChatFrameUtil and ChatFrameUtil.SendTell)),
     Has(C_ClassColor), Has(C_Texture and C_Texture.GetAtlasInfo))
+  Dbg("friend names: %s", db.nameMode)
   local idx = ActiveIconIndex()
   Dbg("faction icon: variant %s (%s)%s | atlas horde=%s alliance=%s", idx, ICONS[idx].name,
     (db.icon or 0) == 0 and " [auto]" or " [manual]",
@@ -520,8 +588,9 @@ local function Dump()
       for _, ga in ipairs(list) do
         if ga.isOnline then
           DEFAULT_CHAT_FRAME:AddMessage(string.format(
-            "|cff888888  %s client=%s%s pid=%s char=%s lvl=%s class=%s faction=%s area=%s realm=%s/%s rich=%s note=%s|r",
-            tostring(acc.battleTag or acc.accountName), tostring(ga.clientProgram),
+            "|cff888888  %s (acct=%s btFriend=%s) client=%s%s pid=%s char=%s lvl=%s class=%s faction=%s area=%s realm=%s/%s rich=%s note=%s|r",
+            tostring(acc.battleTag or "?"), (tostring(acc.accountName):gsub("|", "||")), tostring(acc.isBattleTagFriend),
+            tostring(ga.clientProgram),
             ga.clientProgram == wowClient and "" or " (not WoW)", tostring(ga.wowProjectID),
             tostring(ga.characterName), tostring(ga.characterLevel), tostring(ga.className),
             tostring(ga.factionName), tostring(ga.areaName), tostring(ga.realmName),
@@ -535,7 +604,7 @@ end
 -- Slash-Befehle -----------------------------------------------------------
 local function Help()
   Print(L.HELP:format(VERSION))
-  for _, k in ipairs({ "HELP1", "HELP2", "HELP3", "HELP4", "HELP5", "HELP6" }) do
+  for _, k in ipairs({ "HELP1", "HELP2", "HELP3", "HELP4", "HELP5", "HELP6", "HELP7" }) do
     DEFAULT_CHAT_FRAME:AddMessage(L[k])
   end
 end
@@ -560,6 +629,11 @@ SlashCmdList.FRIENDSLISTLIST = function(msg)
     db.debug = not db.debug
     Print(db.debug and L.DEBUG_ON or L.DEBUG_OFF)
     if db.debug then lastSignature = nil; DebugBanner(); RequestRefresh() end
+  elseif cmd == "names" then
+    db.nameMode = (db.nameMode == "game") and "battletag" or "game"
+    Print(db.nameMode == "game" and L.NAMES_GAME or L.NAMES_BT)
+    lastSignature = nil
+    RequestRefresh()
   elseif cmd == "dump" then
     Dump()
   elseif cmd == "icon" then

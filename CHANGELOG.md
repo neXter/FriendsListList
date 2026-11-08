@@ -3,6 +3,23 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] - 2026-11-08
+
+### Added
+
+- Realm types in the tooltip are colored: PvE green, PvP red, RP-PvE dark green, RP-PvP dark red.
+- `/fll names` switches the friend name between the name shown in game (default) and the BattleTag.
+
+### Fixed
+
+- Friends who are only BattleTag friends (no RealID) are shown with their BattleTag without the `#number` instead of a hidden name.
+- The realm type is also read from the realm name (for example `... Realm 3 PvE`), because the rich presence only carries it for some realms.
+
+### Changed
+
+- The list is sorted by BattleTag within each group, because the real name of a RealID friend is a protected value and cannot be sorted.
+- Debug lines and `/fll dump` show `btFriend` and the raw account name to help with name problems. Friend names are protected values by the game, so they cannot be copied from the chat.
+
 ## [1.1.0] - 2026-11-08
 
 ### Added

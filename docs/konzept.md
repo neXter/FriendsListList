@@ -28,7 +28,7 @@ Eine Zeile pro Freund. Die Felder werden nur durch Leerzeichen getrennt, ohne Sp
 | Feld | Forever-Freund | Retail-Freund | Darstellung |
 | --- | --- | --- | --- |
 | Spiel-Marker | F in Türkis (`#3FB8AF`) | R in Gold (`#E8B83A`) | fetter Buchstabe am Zeilenanfang |
-| Freundesname (BattleTag/RealID) | ja | ja | weiß |
+| Freundesname | ja | ja | weiß. RealID-Freunde: Name wie im Spiel (geschützter Token, der Client zeigt in der Liste den echten Namen). Reine BattleTag-Freunde: BattleTag ohne `#Nummer`. Mit `/fll names` immer der BattleTag |
 | Fraktion | ja | ja | Horde- bzw. Allianz-Wappen, 14 px, direkt vor dem Charakternamen |
 | Charaktername | ja | ja | Klassenfarbe |
 | Level | ja | ja | grau, in Klammern hinter dem Charakternamen |
@@ -41,7 +41,7 @@ F  Jonas  [Allianz-Wappen] Brightwen (47)
 F  Mara   [Horde-Wappen] Kaelthor (60)   ← Anker unten
 ```
 
-**Sortierung:** Gelesen von oben nach unten stehen erst alle Retail-Freunde (R), dann alle Forever-Freunde (F). Innerhalb jeder Gruppe wird alphabetisch nach Freundesname sortiert. Die Liste wächst von unten nach oben: Der Anker sitzt unten, neue Zeilen schieben die Liste nach oben. Die letzte Zeile der Sortierung liegt deshalb direkt am Anker. Technisch bekommt die letzte Zeile der sortierten Liste `rows[1]`, die erste Zeile den höchsten Index.
+**Sortierung:** Gelesen von oben nach unten stehen erst alle Retail-Freunde (R), dann alle Forever-Freunde (F). Innerhalb jeder Gruppe wird alphabetisch nach BattleTag sortiert, weil der echte Name eines RealID-Freundes ein geschützter Wert ist und sich nicht sortieren lässt. Die Liste wächst von unten nach oben: Der Anker sitzt unten, neue Zeilen schieben die Liste nach oben. Die letzte Zeile der Sortierung liegt deshalb direkt am Anker. Technisch bekommt die letzte Zeile der sortierten Liste `rows[1]`, die erste Zeile den höchsten Index.
 
 **Charakterfreunde** (klassische Freundesliste, ohne Battle.net) erscheinen nur nach `/fll chars`, Standard ist aus. Sie zeigen F, Charaktername und Level, aber keinen Freundesnamen. Der Ort steht wie bei allen im Tooltip. Die Fraktion fehlt, weil die klassische Freundesliste sie nicht liefert.
 
@@ -49,7 +49,7 @@ F  Mara   [Horde-Wappen] Kaelthor (60)   ← Anker unten
 
 1. Freundesname (weiß, fett)
 2. Ort des Charakters: Zone, Dungeon oder Schlachtfeld, ungekürzt (hellgrau)
-3. Server (hellblau): bei Retail-Freunden Servername und, wenn bekannt, Realm-Typ, z. B. `Ravencrest (RP-PvE)`. Bei Forever-Freunden nur der Realm-Typ (`PvP`, `PvE`, `RP`, `RP-PvP`, `RP-PvE`). Der Typ wird aus der Rich Presence gelesen (`Forever - PvP - The Barrens`), der Servername aus `realmName`/`realmDisplayName`. Fehlt eine Angabe, entfällt die Zeile.
+3. Server (hellblau): bei Retail-Freunden Servername und, wenn bekannt, Realm-Typ, z. B. `Ravencrest (RP-PvE)`. Bei Forever-Freunden nur der Realm-Typ (`PvP`, `PvE`, `RP`, `RP-PvP`, `RP-PvE`). Der Typ wird aus der Rich Presence gelesen (`Forever - PvP - The Barrens`), ersatzweise aus dem Realm-Namen (`CAMWOW EU5 Realm 3 PvE`), der Servername aus `realmName`/`realmDisplayName`. Der Typ ist farbig: PvE grün, PvP rot, RP-PvE dunkelgrün, RP-PvP dunkelrot (`RP` allein zählt als RP-PvE). Fehlt eine Angabe, entfällt die Zeile.
 4. Notiz aus der Freundesliste (gelb), nur wenn eine gepflegt ist
 
 Die Notiz wird in WoW gepflegt, das Add-on liest sie nur.
@@ -68,6 +68,7 @@ Die Notiz wird in WoW gepflegt, das Add-on liest sie nur.
 | `/fll` | Chat | Wechselt Lock/Unlock (Notlösung, wenn die Liste leer ist) |
 | `/fll chars` | Chat | Zeigt zusätzlich die Charakterfreunde der klassischen Freundesliste oder blendet sie wieder aus (Standard: aus) |
 | `/fll reset` | Chat | Setzt die Position auf die Bildschirmmitte zurück |
+| `/fll names` | Chat | Wechselt den Freundesnamen zwischen Spielname (Standard) und BattleTag |
 | `/fll debug` | Chat | Schaltet die Debug-Ausgabe im Chat um (standardmäßig aus) |
 | `/fll dump` | Chat | Gibt die Rohdaten aller Online-Freunde aus, für Fehlerberichte |
 | `/fll icon <n>` | Chat | Wählt eine Variante des Fraktions-Icons (0 = automatisch) |
