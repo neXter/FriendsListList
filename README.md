@@ -1,58 +1,79 @@
 # FriendsListList
 
-![FriendsListList](docs/assets/icon-256.png)
+![FriendsListList icon](docs/assets/icon-256.png)
 
-A minimal list of your online friends for World of Warcraft Forever. It shows only friends who are online and playing WoW Retail or WoW Forever, as plain text without frames. The list grows from the bottom up.
+**A tiny, borderless list of your online friends for World of Warcraft Forever.**
 
-![Mock](docs/assets/mock.svg)
+FriendsListList shows only the friends who are online right now and playing WoW Retail or WoW Forever. No frame, no background, no clutter: just plain text on your screen that grows from the bottom up. Hover a name to see where your friend is and your own note about them. Click to whisper.
+
+![Illustration of the unlocked and locked list](docs/assets/mock.svg)
+
+*Illustration. Names are examples. The faction crests are simplified here; in game the add-on uses the crests from the game client.*
 
 ## Features
 
-- Battle.net friends playing Retail (`R`, gold) or Forever (`F`, teal)
-- Faction crest, character name in class color, level
-- Sorted top to bottom: Retail first, then Forever, each by friend name
-- Hover tooltip: friend name, location (zone/dungeon) and your Battle.net note
-- Left click on a row: whisper. Right click: lock or unlock
-- Unlocked: a small handle appears, drag it to move the list. Position is saved
-- Optional: character friends of the classic friends list (`/fll chars`)
+- Shows online Battle.net friends playing **Retail** (`R`, gold) or **Forever** (`F`, teal)
+- Per row: game marker, friend name, faction crest, character name in class color, level
+- Sorted from top to bottom: Retail first, then Forever, each alphabetically by friend name
+- **Tooltip** on hover: friend name, location (zone or dungeon) and your Battle.net note, handy for friends whose name does not tell you who they are
+- **Left click** a row to whisper that friend
+- **Right click** to lock or unlock the list. While unlocked, a small handle appears: drag it to move the list. The position is saved
+- Text with outline and shadow, so it stays readable on any background
+- Optional: also show character friends from the classic friends list (`/fll chars`, off by default)
 - English and German (deDE) text
 
 ## Installation
 
-1. Download or clone this repository.
-2. Copy the folder into your AddOns directory, named `FriendsListList`:
+1. Download the latest ZIP.
+2. Extract it so that the folder `FriendsListList` sits in your AddOns directory:
    `World of Warcraft\_forever_\Interface\AddOns\FriendsListList`
-3. Restart the game or reload the UI (`/reload`).
+3. Start the game or type `/reload`.
 
-The `.toc` targets Interface `16001`. The `docs` folder is not needed in the game.
+## Getting started
 
-## Usage
+The list is locked by default, and while nobody is online it shows nothing. Type `/fll` to unlock it: a small handle appears. Drag the handle to the place you like, then right-click it (or any row) to lock the list again.
+
+## Commands
 
 | Command | Description |
 | --- | --- |
 | `/fll` | Lock or unlock the list |
 | `/fll chars` | Show or hide character friends (default: hidden) |
 | `/fll reset` | Reset the position to the screen center |
-| `/fll debug` | Toggle debug output in chat (default: on in 1.0) |
+| `/fll debug` | Toggle debug output in chat |
 | `/fll dump` | Print raw data of all online friends, useful for bug reports |
-| `/fll icon <n>` | Choose a faction icon variant (0 = automatic) |
+| `/fll icon <n>` | Choose a faction crest variant, 0 = automatic |
 | `/fll help` | Show the command list |
 
-If the list is empty and locked, nothing is visible. Type `/fll` to unlock it and show the handle.
+## Known limitations
 
-## Feedback
+- Designed for the WoW Forever client (Interface 16001). Not tested elsewhere.
+- Which details the game provides for friends playing another game version can vary. If a field is missing, the row simply shows what is available.
+- The faction crest uses textures from the game client. If it looks wrong, try `/fll icon 1` to `/fll icon 4`.
+- Notes are read-only: edit them in the game's friends list as usual.
+- This is an early version: debug output in chat is on by default. Turn it off with `/fll debug`.
 
-This is a first version. Please send the chat output with debug on, plus the result of `/fll dump`, for anything that looks wrong: missing friends, wrong faction icons, empty fields.
+## Troubleshooting and feedback
 
-## Docs
+If something looks wrong (missing friends, wrong crests, empty fields), please report it with:
 
-The product and technical concept is in [docs/konzept.md](docs/konzept.md) (German).
+1. the game client version,
+2. the chat lines starting with `FLL dbg:` right after login or `/reload`,
+3. the output of `/fll dump`.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
 Copyright (c) 2026 neXter. All Rights Reserved. See [LICENSE](LICENSE).
 
 You may download and use the add-on unmodified for personal, non-commercial use. Any copying, modification, or redistribution requires written permission from the author.
+
+## Disclaimer
+
+FriendsListList is a fan-made add-on and is not affiliated with or endorsed by Blizzard Entertainment. World of Warcraft is a trademark of Blizzard Entertainment, Inc. The add-on contains no Blizzard artwork. Faction crests are displayed by referencing textures that already ship with the game client.
 
 ## Author
 
