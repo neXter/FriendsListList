@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: FriendsListList
+## Notes: Minimal list of online friends playing WoW Retail or WoW Forever
+## Notes-deDE: Minimalistische Liste der Online-Freunde, die WoW Retail oder WoW Forever spielen
+## Author: neXter
+## Version: 1.0.0
+## SavedVariables: FriendsListListDB
+## IconTexture: Interface\AddOns\FriendsListList\Icons\icon
+
+FriendsListList.lua
