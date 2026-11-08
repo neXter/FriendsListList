@@ -3,9 +3,24 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-11-08
+
+### Added
+
+- Tooltip shows the realm type (PvP, PvE, RP, RP-PvP, RP-PvE) and, for Retail friends, the server name.
+
+### Fixed
+
+- Friends whose Battle.net name is hidden (`???`) are shown with their BattleTag without the `#number`.
+
+### Changed
+
+- Debug output in chat is now off by default (`/fll debug` switches it on). The welcome line no longer mentions it.
+- Debug output summarizes friends that are online but not in WoW (App, mobile app) in one line.
+
 ## [1.0.0] - 2026-11-08
 
-First release. Debug output is on by default so that early feedback is easy; switch it off with `/fll debug`.
+First release. Debug output in chat is on by default in this version; switch it off with `/fll debug`.
 
 ### Added
 

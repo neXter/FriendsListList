@@ -1,12 +1,8 @@
 # FriendsListList
 
-![FriendsListList icon](docs/assets/icon-256.png)
-
 **A tiny, borderless list of your online friends for World of Warcraft Forever.**
 
 FriendsListList shows only the friends who are online right now and playing WoW Retail or WoW Forever. No frame, no background, no clutter: just plain text on your screen that grows from the bottom up. Hover a name to see where your friend is and your own note about them. Click to whisper.
-
-![Illustration of the unlocked and locked list](docs/assets/mock.svg)
 
 *Illustration. Names are examples. The faction crests are simplified here; in game the add-on uses the crests from the game client.*
 
@@ -15,7 +11,7 @@ FriendsListList shows only the friends who are online right now and playing WoW 
 - Shows online Battle.net friends playing **Retail** (`R`, gold) or **Forever** (`F`, teal)
 - Per row: game marker, friend name, faction crest, character name in class color, level
 - Sorted from top to bottom: Retail first, then Forever, each alphabetically by friend name
-- **Tooltip** on hover: friend name, location (zone or dungeon) and your Battle.net note, handy for friends whose name does not tell you who they are
+- **Tooltip** on hover: friend name, location (zone or dungeon), realm type (PvP, PvE, RP, RP-PvP, RP-PvE), the server name for Retail friends, and your Battle.net note, handy for friends whose name does not tell you who they are
 - **Left click** a row to whisper that friend
 - **Right click** to lock or unlock the list. While unlocked, a small handle appears: drag it to move the list. The position is saved
 - Text with outline and shadow, so it stays readable on any background
@@ -51,14 +47,14 @@ The list is locked by default, and while nobody is online it shows nothing. Type
 - Which details the game provides for friends playing another game version can vary. If a field is missing, the row simply shows what is available.
 - The faction crest uses textures from the game client. If it looks wrong, try `/fll icon 1` to `/fll icon 4`.
 - Notes are read-only: edit them in the game's friends list as usual.
-- This is an early version: debug output in chat is on by default. Turn it off with `/fll debug`.
+- Debug output in chat is off by default. Turn it on with `/fll debug` when you want to report a problem.
 
 ## Troubleshooting and feedback
 
 If something looks wrong (missing friends, wrong crests, empty fields), please report it with:
 
 1. the game client version,
-2. the chat lines starting with `FLL dbg:` right after login or `/reload`,
+2. the chat lines starting with `FLL dbg:` after you switched debug on with `/fll debug`,
 3. the output of `/fll dump`.
 
 ## Changelog

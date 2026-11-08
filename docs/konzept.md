@@ -45,11 +45,12 @@ F  Mara   [Horde-Wappen] Kaelthor (60)   ← Anker unten
 
 **Charakterfreunde** (klassische Freundesliste, ohne Battle.net) erscheinen nur nach `/fll chars`, Standard ist aus. Sie zeigen F, Charaktername und Level, aber keinen Freundesnamen. Der Ort steht wie bei allen im Tooltip. Die Fraktion fehlt, weil die klassische Freundesliste sie nicht liefert.
 
-**Tooltip:** Beim Hover über eine Zeile erscheint ein Tooltip mit drei Zeilen:
+**Tooltip:** Beim Hover über eine Zeile erscheint ein Tooltip mit bis zu vier Zeilen:
 
 1. Freundesname (weiß, fett)
 2. Ort des Charakters: Zone, Dungeon oder Schlachtfeld, ungekürzt (hellgrau)
-3. Notiz aus der Freundesliste (gelb), nur wenn eine gepflegt ist
+3. Server (hellblau): bei Retail-Freunden Servername und, wenn bekannt, Realm-Typ, z. B. `Ravencrest (RP-PvE)`. Bei Forever-Freunden nur der Realm-Typ (`PvP`, `PvE`, `RP`, `RP-PvP`, `RP-PvE`). Der Typ wird aus der Rich Presence gelesen (`Forever - PvP - The Barrens`), der Servername aus `realmName`/`realmDisplayName`. Fehlt eine Angabe, entfällt die Zeile.
+4. Notiz aus der Freundesliste (gelb), nur wenn eine gepflegt ist
 
 Die Notiz wird in WoW gepflegt, das Add-on liest sie nur.
 
@@ -67,7 +68,7 @@ Die Notiz wird in WoW gepflegt, das Add-on liest sie nur.
 | `/fll` | Chat | Wechselt Lock/Unlock (Notlösung, wenn die Liste leer ist) |
 | `/fll chars` | Chat | Zeigt zusätzlich die Charakterfreunde der klassischen Freundesliste oder blendet sie wieder aus (Standard: aus) |
 | `/fll reset` | Chat | Setzt die Position auf die Bildschirmmitte zurück |
-| `/fll debug` | Chat | Schaltet die Debug-Ausgabe im Chat um (in 1.0 standardmäßig an) |
+| `/fll debug` | Chat | Schaltet die Debug-Ausgabe im Chat um (standardmäßig aus) |
 | `/fll dump` | Chat | Gibt die Rohdaten aller Online-Freunde aus, für Fehlerberichte |
 | `/fll icon <n>` | Chat | Wählt eine Variante des Fraktions-Icons (0 = automatisch) |
 
@@ -119,7 +120,7 @@ FriendsListList/
 FriendsListListDB = {
   locked = true,
   showCharFriends = false,
-  debug = true,   -- 1.0: an, für Feedback
+  debug = false,  -- Debug-Ausgabe im Chat, per /fll debug
   icon = 0,       -- 0 = automatisch, sonst Variante 1-4
   point = "BOTTOMLEFT", relPoint = "BOTTOMLEFT", x = 40, y = 300,
 }

@@ -1,13 +1,13 @@
--- FriendsListList 1.0.0 – minimalistische Online-Freundesliste für WoW Forever (Interface 16001)
+-- FriendsListList 1.1.0 – minimalistische Online-Freundesliste für WoW Forever (Interface 16001)
 -- Autor: neXter
 local ADDON = ...
-local VERSION = "1.0.0"
+local VERSION = "1.1.0"
 local TAG = "|cff3FB8AFFLL|r"
 
 -- Lokalisierung -----------------------------------------------------------
 local IS_DE = GetLocale() == "deDE"
 local EN = {
-  READY = "v%s loaded. /fll help for commands. Debug output is ON (/fll debug to toggle).",
+  READY = "v%s loaded. /fll help for commands.",
   LOCKED = "List locked.",
   UNLOCKED = "List unlocked – drag the handle, right-click to lock.",
   CHARS_ON = "Character friends: shown.",
@@ -27,7 +27,7 @@ local EN = {
   NOTE = "Note",
 }
 local DE = {
-  READY = "v%s geladen. /fll help zeigt die Befehle. Debug-Ausgabe ist AN (/fll debug schaltet um).",
+  READY = "v%s geladen. /fll help zeigt die Befehle.",
   LOCKED = "Liste gesperrt.",
   UNLOCKED = "Liste entsperrt – Griff ziehen, Rechtsklick zum Sperren.",
   CHARS_ON = "Charakterfreunde: werden angezeigt.",
@@ -59,7 +59,7 @@ local REFRESH_DELAY = 0.5
 local DEFAULTS = {
   locked = true,
   showCharFriends = false,
-  debug = true,   -- 1.0: Debug standardmäßig an, damit Feedback möglich ist
+  debug = false,  -- Debug-Ausgabe im Chat: /fll debug
   icon = 0,       -- 0 = automatisch
   point = "CENTER", relPoint = "CENTER", x = 0, y = 0,
 }
@@ -150,6 +150,33 @@ end
 -- Daten sammeln -----------------------------------------------------------
 local function Lower(s) return (s or ""):lower() end
 
+-- Realm-Typ steckt in richPresence, z. B. "Forever - PvP - The Barrens".
+-- Wir suchen ein Segment, das wie PvP / PvE / RP / RP-PvP / RP-PvE aussieht.
+local REALM_TYPES = { ["PVP"] = true, ["PVE"] = true, ["RP"] = true, ["RP-PVP"] = true,
+  ["RP-PVE"] = true, ["RPPVP"] = true, ["RPPVE"] = true }
+
+local function ParseRealmType(rich)
+  if not rich or rich == "" then return nil end
+  for seg in (rich .. " - "):gmatch("(.-) %- ") do
+    local norm = seg:gsub("%s", ""):upper()
+    if REALM_TYPES[norm] then return seg end
+  end
+  return nil
+end
+
+-- accountName kann leer oder "???" sein (Freund ohne RealID-Namen): dann BattleTag ohne #Nummer
+local function UsableName(name)
+  if name and name ~= "" and name ~= "???" then return name end
+  return nil
+end
+
+local function FriendName(acc)
+  local name = UsableName(acc.accountName)
+  if name then return name end
+  local short = acc.battleTag and acc.battleTag:match("^([^#]+)")
+  return UsableName(short)
+end
+
 local function CollectBNet(out, stats)
   local num = BNGetNumFriends and (BNGetNumFriends()) or 0
   stats.bnetTotal = num
@@ -172,7 +199,8 @@ local function CollectBNet(out, stats)
           stats.bnetOnline = stats.bnetOnline + 1
           local who = acc.battleTag or acc.accountName or "?"
           if ga.clientProgram ~= wowClient then
-            stats.notes[#stats.notes + 1] = "skip " .. who .. ": client=" .. tostring(ga.clientProgram)
+            local c = tostring(ga.clientProgram)
+            stats.otherClients[c] = (stats.otherClients[c] or 0) + 1
           else
             local pid = ga.wowProjectID
             local game
@@ -182,17 +210,24 @@ local function CollectBNet(out, stats)
               stats.notes[#stats.notes + 1] = "skip " .. who .. ": wowProjectID=" .. tostring(pid)
             else
               local area = ga.areaName
-              if not area or area == "" then area = ga.richPresence end
+              if not area or area == "" then
+                -- Fallback: letztes Segment der Rich Presence ("Forever - PvP - The Barrens" -> "The Barrens")
+                local rich = ga.richPresence
+                if rich and rich ~= "" then area = rich:match("([^%-]+)%s*$") or rich; area = area:gsub("^%s+", "") end
+              end
               out[#out + 1] = {
                 game = game,
-                friend = acc.accountName or acc.battleTag,
-                sortName = Lower(acc.battleTag or acc.accountName),
-                bnetName = acc.accountName,
+                friend = FriendName(acc),
+                sortName = Lower(FriendName(acc) or acc.battleTag),
+                bnetName = UsableName(acc.accountName) or acc.battleTag,
+                battleTag = acc.battleTag,
                 char = ga.characterName,
                 level = tonumber(ga.characterLevel),
                 class = ga.className,
                 faction = ga.factionName,
                 area = area,
+                realm = UsableName(ga.realmDisplayName) or UsableName(ga.realmName),
+                realmType = ParseRealmType(ga.richPresence),
                 note = acc.note,
                 pid = pid,
               }
@@ -305,6 +340,7 @@ local function Whisper(entry)
     elseif ChatFrameUtil and ChatFrameUtil.SendTell then ChatFrameUtil.SendTell(entry.char)
     else Dbg("whisper: no SendTell API") end
   else
+    Dbg("whisper bnet: target=%s", entry.bnetName)
     if ChatFrame_SendBNetTell then ChatFrame_SendBNetTell(entry.bnetName)
     elseif ChatFrameUtil and ChatFrameUtil.SendBNetTell then ChatFrameUtil.SendBNetTell(entry.bnetName)
     else Dbg("whisper: no SendBNetTell API") end
@@ -328,6 +364,12 @@ local function ShowTooltip(row)
   GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
   GameTooltip:AddLine(e.friend or e.char or "?", 1, 1, 1)
   if e.area and e.area ~= "" then GameTooltip:AddLine(e.area, 0.8, 0.8, 0.8) end
+  -- Retail-Freunde: Servername (+ Typ), Forever-Freunde: nur Realm-Typ
+  local server = e.game == "R" and e.realm or nil
+  local serverLine
+  if server and e.realmType then serverLine = server .. " (" .. e.realmType .. ")"
+  else serverLine = server or e.realmType end
+  if serverLine then GameTooltip:AddLine(serverLine, 0.6, 0.8, 1) end
   if e.note and e.note ~= "" then GameTooltip:AddLine(e.note, 1, 0.82, 0, true) end
   GameTooltip:Show()
 end
@@ -396,15 +438,22 @@ end
 local lastSignature
 
 local function DescribeEntry(e)
-  return string.format("  %s %s | char=%s lvl=%s class=%s faction=%s area=%s pid=%s note=%s",
-    e.game, tostring(e.friend or "-"), tostring(e.char), tostring(e.level), tostring(e.class),
-    tostring(e.faction), tostring(e.area), tostring(e.pid), (e.note and e.note ~= "") and "yes" or "no")
+  return string.format("  %s %s (%s) | char=%s lvl=%s class=%s faction=%s area=%s realm=%s type=%s pid=%s note=%s",
+    e.game, tostring(e.friend or "-"), tostring(e.battleTag or "-"), tostring(e.char), tostring(e.level), tostring(e.class),
+    tostring(e.faction), tostring(e.area), tostring(e.realm), tostring(e.realmType), tostring(e.pid),
+    (e.note and e.note ~= "") and "yes" or "no")
 end
 
 local function DoRefresh()
   local out = {}
-  local stats = { bnetTotal = 0, bnetOnline = 0, charTotal = 0, charOnline = 0, notes = {} }
+  local stats = { bnetTotal = 0, bnetOnline = 0, charTotal = 0, charOnline = 0, notes = {}, otherClients = {} }
   CollectBNet(out, stats)
+  local others = {}
+  for client, count in pairs(stats.otherClients) do others[#others + 1] = client .. "=" .. count end
+  table.sort(others)
+  if #others > 0 then
+    stats.notes[#stats.notes + 1] = "not in WoW (client=count): " .. table.concat(others, " ")
+  end
   if db.showCharFriends then CollectChars(out, stats) end
   SortEntries(out)
   Render(out)
@@ -418,7 +467,7 @@ local function DoRefresh()
       lastSignature = signature
       local r, f = 0, 0
       for _, e in ipairs(out) do if e.game == "R" then r = r + 1 else f = f + 1 end end
-      Dbg("refresh: bnet total=%s online(WoW-accounts)=%s | shown R=%s F=%s | chars=%s (online=%s)",
+      Dbg("refresh: bnet friends=%s online game accounts=%s | shown R=%s F=%s | chars=%s (online=%s)",
         stats.bnetTotal, stats.bnetOnline, r, f, db.showCharFriends and "on" or "off", stats.charOnline)
       for _, line in ipairs(sig) do DEFAULT_CHAT_FRAME:AddMessage("|cff888888" .. line .. "|r") end
     end
@@ -471,12 +520,12 @@ local function Dump()
       for _, ga in ipairs(list) do
         if ga.isOnline then
           DEFAULT_CHAT_FRAME:AddMessage(string.format(
-            "|cff888888  %s client=%s%s pid=%s char=%s lvl=%s class=%s faction=%s area=%s rich=%s note=%s|r",
+            "|cff888888  %s client=%s%s pid=%s char=%s lvl=%s class=%s faction=%s area=%s realm=%s/%s rich=%s note=%s|r",
             tostring(acc.battleTag or acc.accountName), tostring(ga.clientProgram),
             ga.clientProgram == wowClient and "" or " (not WoW)", tostring(ga.wowProjectID),
             tostring(ga.characterName), tostring(ga.characterLevel), tostring(ga.className),
-            tostring(ga.factionName), tostring(ga.areaName), tostring(ga.richPresence),
-            tostring(acc.note)))
+            tostring(ga.factionName), tostring(ga.areaName), tostring(ga.realmName),
+            tostring(ga.realmDisplayName), tostring(ga.richPresence), tostring(acc.note)))
         end
       end
     end
