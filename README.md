@@ -13,7 +13,6 @@ FriendsListList shows only the friends who are online right now and playing WoW 
 - Sorted from top to bottom: Retail first, then Forever, each alphabetically by BattleTag
 - **Tooltip** on hover: friend name, location (zone or dungeon), realm type in color (PvE green, PvP red, RP-PvE dark green, RP-PvP dark red), the server name for Retail friends, and your Battle.net note, handy for friends whose name does not tell you who they are
 - **Other characters:** the add-on remembers the characters a friend has been seen on and lists the others in the tooltip (most recent first, up to 6 shown, 10 saved per friend). It only knows characters it has seen online while it was installed
-- **Guild** in the tooltip, per character: the game has no friend API for it, so the add-on looks it up with a throttled `/who` when you hover a Forever friend and remembers the result. The guild line appears about a second after the first hover. Retail friends and offline characters cannot be looked up. Turn it off with `/fll guild`
 - **Left click** a row to whisper that friend
 - **Right click** to lock or unlock the list. While unlocked, a small handle appears: drag it to move the list. The position is saved
 - Text with outline and shadow, so it stays readable on any background
@@ -39,8 +38,7 @@ The list is locked by default, and while nobody is online it shows nothing. Type
 | `/fll chars` | Show or hide character friends (default: hidden) |
 | `/fll reset` | Reset the position to the screen center |
 | `/fll names` | Friend names: as shown in game (default) or BattleTag |
-| `/fll guild` | Turn the guild lookup (`/who` on tooltip hover) on or off (default: on) |
-| `/fll forget` | Delete all saved characters and guilds of your friends |
+| `/fll forget` | Delete all saved characters of your friends |
 | `/fll debug` | Toggle debug output in chat |
 | `/fll dump` | Print raw data of all online friends, useful for bug reports |
 | `/fll icon <n>` | Choose a faction crest variant, 0 = automatic |
@@ -51,6 +49,7 @@ The list is locked by default, and while nobody is online it shows nothing. Type
 - Designed for the WoW Forever client (Interface 16001). Not tested elsewhere.
 - Which details the game provides for friends playing another game version can vary. If a field is missing, the row simply shows what is available.
 - The faction crest uses textures from the game client. If it looks wrong, try `/fll icon 1` to `/fll icon 4`.
+- The guild of a friend is not shown: the game gives add-ons no way to look it up (`/who` is blocked for add-ons).
 - Notes are read-only: edit them in the game's friends list as usual.
 - Debug output in chat is off by default. Turn it on with `/fll debug` when you want to report a problem.
 

@@ -13,15 +13,14 @@ FriendsListList ist eine schlanke Liste ohne Rahmen. Sie zeigt nur die Freunde, 
 - Klick-Whisper, Lock/Unlock, frei verschiebbar, Position wird gespeichert
 - Tooltip beim Hover mit Ort (Zone/Dungeon) und Notiz zum Freund (die Notiz hilft bei BattleTag-Freunden ohne RealID, deren Namen nichts verraten)
 - Merkt sich die Charaktere, auf denen ein Freund schon gesehen wurde, und zeigt die anderen im Tooltip (`/fll forget` löscht sie)
-- Gilde pro Charakter im Tooltip: Keine Freunde-API liefert sie, deshalb schlägt das Add-on sie beim Hover per `/who` nach und merkt sie sich (`/fll guild` schaltet das ab)
 
-**Nicht drin:** Offline-Freunde, andere Spiele (Diablo, Overwatch, Classic Era usw.), Optionsmenü, Notizen bearbeiten, Gruppen, Sortier-Einstellungen, Minimap-Button.
+**Nicht drin:** Gilde der Freunde (siehe „Gilde“ unten), Offline-Freunde, andere Spiele (Diablo, Overwatch, Classic Era usw.), Optionsmenü, Notizen bearbeiten, Gruppen, Sortier-Einstellungen, Minimap-Button.
 
 ## Mini-Mock
 
 ![Mini-Mock: gesperrt vs. entsperrt, 2 Forever- + 2 Retail-Freunde](assets/mock.svg)
 
-Von oben nach unten stehen erst die Retail-Freunde (Lena, Tobi), dann die Forever-Freunde (Jonas, Mara), jeweils alphabetisch. Alle haben ein Fraktionswappen. Ein türkises F markiert Forever, ein goldenes R markiert Retail. Rechts zeigt der Tooltip Gilde, Ort, Notiz und weitere Charaktere zu Mara. Die Wappen sind im Mock vereinfacht nachgezeichnet. Alle Namen sind Beispiele.
+Von oben nach unten stehen erst die Retail-Freunde (Lena, Tobi), dann die Forever-Freunde (Jonas, Mara), jeweils alphabetisch. Alle haben ein Fraktionswappen. Ein türkises F markiert Forever, ein goldenes R markiert Retail. Rechts zeigt der Tooltip Ort, Notiz und weitere Charaktere zu Mara. Die Wappen sind im Mock vereinfacht nachgezeichnet. Alle Namen sind Beispiele.
 
 ## Anzeige-Regeln
 
@@ -47,27 +46,19 @@ F  Mara   [Horde-Wappen] Kaelthor (60)   ← Anker unten
 
 **Charakterfreunde** (klassische Freundesliste, ohne Battle.net) erscheinen nur nach `/fll chars`, Standard ist aus. Sie zeigen F, Charaktername und Level, aber keinen Freundesnamen. Der Ort steht wie bei allen im Tooltip. Die Fraktion fehlt, weil die klassische Freundesliste sie nicht liefert.
 
-**Tooltip:** Beim Hover über eine Zeile erscheint ein Tooltip mit bis zu fünf Zeilen, dazu optional einem Block mit weiteren Charakteren (Punkt 6):
+**Tooltip:** Beim Hover über eine Zeile erscheint ein Tooltip mit bis zu vier Zeilen, dazu optional einem Block mit weiteren Charakteren (Punkt 5):
 
 1. Freundesname (weiß, fett)
-2. Gilde des Charakters als `<Gildenname>` (grün), nur wenn bekannt. Beim ersten Hover fehlt die Zeile und erscheint nach etwa einer Sekunde, sobald die `/who`-Antwort da ist (siehe „Gildensuche“)
-3. Ort des Charakters: Zone, Dungeon oder Schlachtfeld, ungekürzt (hellgrau)
-4. Server (hellblau): bei Retail-Freunden Servername und, wenn bekannt, Realm-Typ, z. B. `Ravencrest (RP-PvE)`. Bei Forever-Freunden nur der Realm-Typ (`PvP`, `PvE`, `RP`, `RP-PvP`, `RP-PvE`). Der Typ wird aus der Rich Presence gelesen (`Forever - PvP - The Barrens`), ersatzweise aus dem Realm-Namen (`CAMWOW EU5 Realm 3 PvE`), der Servername aus `realmName`/`realmDisplayName`. Der Typ ist farbig: PvE grün, PvP rot, RP-PvE dunkelgrün, RP-PvP dunkelrot (`RP` allein zählt als RP-PvE). Fehlt eine Angabe, entfällt die Zeile.
-5. Notiz aus der Freundesliste (gelb), nur wenn eine gepflegt ist
-6. Weitere Charaktere (nur wenn der Freund schon auf anderen Charakteren gesehen wurde): Leerzeile, Überschrift „Weitere Charaktere:“ (grau), dann je Charakter eine Zeile mit F/R-Marker, Name in Klassenfarbe, Level in Klammern und bei Retail-Charakteren dem Servernamen (hellblau), bei Forever-Charakteren dem Modus (PvE, PvP, RP, RP-PvP, RP-PvE, farbig wie in Zeile 4), weil Forever keine Realms hat. Danach, wenn gemerkt, die Gilde des Charakters in dunklerem Grün. Zuletzt gesehene Charaktere stehen oben, maximal 6, darunter „+N weitere“.
+2. Ort des Charakters: Zone, Dungeon oder Schlachtfeld, ungekürzt (hellgrau)
+3. Server (hellblau): bei Retail-Freunden Servername und, wenn bekannt, Realm-Typ, z. B. `Ravencrest (RP-PvE)`. Bei Forever-Freunden nur der Realm-Typ (`PvP`, `PvE`, `RP`, `RP-PvP`, `RP-PvE`). Der Typ wird aus der Rich Presence gelesen (`Forever - PvP - The Barrens`), ersatzweise aus dem Realm-Namen (`CAMWOW EU5 Realm 3 PvE`), der Servername aus `realmName`/`realmDisplayName`. Der Typ ist farbig: PvE grün, PvP rot, RP-PvE dunkelgrün, RP-PvP dunkelrot (`RP` allein zählt als RP-PvE). Fehlt eine Angabe, entfällt die Zeile.
+4. Notiz aus der Freundesliste (gelb), nur wenn eine gepflegt ist
+5. Weitere Charaktere (nur wenn der Freund schon auf anderen Charakteren gesehen wurde): Leerzeile, Überschrift „Weitere Charaktere:“ (grau), dann je Charakter eine Zeile mit F/R-Marker, Name in Klassenfarbe, Level in Klammern und bei Retail-Charakteren dem Servernamen (hellblau), bei Forever-Charakteren dem Modus (PvE, PvP, RP, RP-PvP, RP-PvE, farbig wie in Zeile 3), weil Forever keine Realms hat. Zuletzt gesehene Charaktere stehen oben, maximal 6, darunter „+N weitere“.
 
 Die Notiz wird in WoW gepflegt, das Add-on liest sie nur.
 
 **Gemerkte Charaktere:** Bei jedem Refresh speichert das Add-on für jeden online gesehenen Battle.net-Freund den aktuellen Charakter (Name, Klasse, Level, F/R, Realm, Modus, Zeitpunkt). Schlüssel ist der BattleTag des Freundes, weil er der einzige stabile Bezeichner ist. Innerhalb eines Freundes ist ein Charakter über Spiel + Name eindeutig. Der Realm wird absichtlich nicht in den Schlüssel genommen, weil er nicht immer sofort mitkommt und sonst Dubletten entstehen. Pro Freund bleiben höchstens 10 Charaktere erhalten, danach fliegt der am längsten nicht gesehene raus. Der Charakter, auf dem der Freund gerade ist, steht nicht in der Liste. Charakterfreunde der klassischen Freundesliste haben keinen BattleTag und werden nicht gespeichert. Die Klasse wird als `classFile` abgelegt, damit die Farbe auch nach einem Sprachwechsel stimmt. Kommt ein Feld leer an (Klasse, Level, Realm, Modus, etwa kurz nach dem Login oder projektübergreifend), bleibt der gespeicherte Wert stehen. Gesehen werden kann nur, was der Freund schon online gespielt hat, während das Add-on lief: Eine Historie vor der Installation gibt es nicht.
 
-**Gildensuche:** Weder `C_BattleNet.GetFriendGameAccountInfo` noch `C_FriendList.GetFriendInfoByIndex` liefern eine Gilde, nur `/who` (`C_FriendList.SendWho`, Ergebnis `C_FriendList.GetWhoInfo(i).fullGuildName` nach `WHO_LIST_UPDATE`). Ablauf:
-
-- `OnEnter` einer Forever-Zeile (`game == "F"`, mit Charaktername) stellt eine Anfrage `n-"Name"` in eine Warteschlange, wenn der Cache nicht frisch ist. Retail-Freunde werden nicht abgefragt, weil sie aus Forever per `/who` nicht sichtbar sind.
-- Gedrosselt: höchstens eine Anfrage gleichzeitig, mindestens 6 s Abstand, höchstens 5 wartende Anfragen (der zuletzt überfahrene Freund kommt zuerst). Kein Antwort-Event nach 8 s gilt als erfolglos.
-- Vor dem Senden `C_FriendList.SetWhoToUi(true)` (kein Chat-Echo) und das Blizzard-`FriendsFrame` hört währenddessen nicht auf `WHO_LIST_UPDATE` (wie LibWho), damit sich kein Fenster öffnet. Danach wird der Event wieder registriert und `SetWhoToUi(false)` gesetzt. Ist der Who-Reiter gerade offen, sendet das Add-on nichts.
-- Die Antwort wird nach Namen geprüft. Liefert `/who` Treffer, aber nicht unseren Charakter (etwa eine manuelle Suche des Spielers), wird sie ignoriert. Null Treffer (Charakter offline oder nicht gefunden) gilt als „nicht gefunden“.
-- Cache: `db.guilds["F:name"] = { guild, seen, tried }`, höchstens 300 Einträge (der älteste fliegt raus). Bekannte Gilde oder „keine Gilde“ gilt 24 h, ein erfolgloser Versuch 10 min. Eine bekannte Gilde wird nach erfolgloser Suche nicht gelöscht. Der Cache gilt je Charaktername, deshalb erscheint die Gilde auch bei den weiteren Charakteren, sobald dieser Charakter einmal online abgefragt wurde. Offline-Charaktere können nicht abgefragt werden.
-- `/fll guild` schaltet die Suche ab (Standard: an), `/fll forget` löscht auch den Gilden-Cache.
+**Gilde (bewusst nicht drin):** Weder `C_BattleNet.GetFriendGameAccountInfo` noch `C_FriendList.GetFriendInfoByIndex` liefern die Gilde eines Freundes. Der einzige Weg wäre `/who` (`C_FriendList.SendWho`), aber der Client sperrt die Funktion für Add-ons: Ein Aufruf löst `ADDON_ACTION_BLOCKED` ("tried to call the protected function 'SendWho()'") aus. Das war in 1.4.0 eingebaut und wurde in 1.4.1 wieder entfernt. Andere Gilden-Add-ons (Guild Overlay Forever, Forever Guild) arbeiten nur innerhalb der eigenen Gilde und tauschen Daten per Add-on-Nachrichten zwischen Spielern aus, die das Add-on installiert haben. Das hilft bei beliebigen Freunden nicht. Denkbar wären später: Gilde nur zeigen, wenn der Freund in der eigenen Gilde, Gruppe oder im Ziel ist (Gildenliste bzw. `GetGuildInfo(unit)`), oder Add-on-Nachrichten zwischen Freunden, die beide FriendsListList haben.
 
 **Leere Liste:** Gesperrt ist nichts zu sehen. Entsperrt ist nur der Verschiebe-Griff sichtbar.
 
@@ -84,8 +75,7 @@ Die Notiz wird in WoW gepflegt, das Add-on liest sie nur.
 | `/fll chars` | Chat | Zeigt zusätzlich die Charakterfreunde der klassischen Freundesliste oder blendet sie wieder aus (Standard: aus) |
 | `/fll reset` | Chat | Setzt die Position auf die Bildschirmmitte zurück |
 | `/fll names` | Chat | Wechselt den Freundesnamen zwischen Spielname (Standard) und BattleTag |
-| `/fll guild` | Chat | Schaltet die Gildensuche per `/who` beim Hover ein/aus (Standard: an) |
-| `/fll forget` | Chat | Löscht alle gemerkten Charaktere der Freunde und den Gilden-Cache |
+| `/fll forget` | Chat | Löscht alle gemerkten Charaktere der Freunde |
 | `/fll debug` | Chat | Schaltet die Debug-Ausgabe im Chat um (standardmäßig aus) |
 | `/fll dump` | Chat | Gibt die Rohdaten aller Online-Freunde aus, für Fehlerberichte |
 | `/fll icon <n>` | Chat | Wählt eine Variante des Fraktions-Icons (0 = automatisch) |
@@ -119,7 +109,6 @@ FriendsListList/
 - `BN_FRIEND_ACCOUNT_ONLINE`, `BN_FRIEND_ACCOUNT_OFFLINE`, `BN_FRIEND_INFO_CHANGED`
 - `FRIENDLIST_UPDATE`
 - Zusätzlich `C_FriendList.ShowFriends()` beim Login, aber nur wenn Charakterfreunde aktiviert sind.
-- `WHO_LIST_UPDATE` löst kein Refresh aus, sondern wird nur für die Gildensuche ausgewertet.
 
 **Frame-Aufbau**
 
@@ -142,10 +131,6 @@ FriendsListListDB = {
   debug = false,  -- Debug-Ausgabe im Chat, per /fll debug
   icon = 0,       -- 0 = automatisch, sonst Variante 1-4
   nameMode = "game",  -- oder "battletag"
-  guild = true,       -- Gildensuche per /who beim Hover, per /fll guild
-  guilds = {          -- Gilden-Cache je Charakter
-    ["F:smash"] = { guild = "Die Nachtwache", seen = 1762700000 },  -- tried = Zeitpunkt eines erfolglosen Versuchs
-  },
   alts = {            -- gemerkte Charaktere je Freund, Schlüssel = BattleTag
     ["Name#1234"] = {
       ["F:smash"] = { char = "Smash", class = "Krieger", classFile = "WARRIOR", level = 42, game = "F", realm = nil, realmType = "PvE", seen = 1762700000 },
@@ -166,7 +151,6 @@ FriendsListListDB = {
 - [ ] Ist `ChatFrame_SendBNetTell` in 12.x noch global, oder nur über `ChatFrameUtil` erreichbar?
 - [ ] Welche Client-Textur bzw. welches Atlas-Icon zeigt Horde- und Allianz-Wappen sauber in 14 px? Im Spiel per Texture-Browser prüfen. Kandidaten: `Interface\TargetingFrame\UI-PVP-Horde` / `UI-PVP-Alliance`.
 - [ ] Gemerkte Charaktere: Liefert die API den BattleTag zuverlässig für alle Freunde, auch RealID-Freunde? Ohne BattleTag wird nichts gespeichert. Im Spiel mit einem Freund auf zwei Charakteren prüfen (`/fll debug` zeigt `others=N` je Zeile).
-- [ ] Gildensuche: Sind `C_FriendList.SendWho`, `GetNumWhoResults`, `GetWhoInfo` und `SetWhoToUi` im Forever-Client vorhanden (`/fll debug` zeigt es im Banner)? Liefert `GetWhoInfo(i).fullGuildName` die Gilde? Kommt `fullName` mit oder ohne Realm? Öffnet sich trotz Unregister auf `FriendsFrame` ein Fenster, oder erscheint ein Chat-Echo der `/who`-Antwort? Ist `SetWhoToUi(false)` der richtige Ausgangszustand, oder soll der alte Wert wiederhergestellt werden? Wird die Anfrage vom Server gedrosselt (Meldung im Chat) und reicht dann der Abstand von 6 s? Wenn `/who` nicht taugt: `/fll guild` aus, dann gibt es keine Gilden.
 
 - Risiko: Weitere Secret-Value-Einschränkungen aus Midnight könnten auch Freundesdaten treffen. Bisher gibt es dafür keinen Hinweis.
 

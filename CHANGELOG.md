@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.1] - 2026-11-10
+
+### Removed
+
+- The guild lookup from 1.4.0 (`/fll guild`). It sent a `/who` when hovering a friend, but the game blocks add-ons from calling `SendWho()`, so every hover raised an `ADDON_ACTION_BLOCKED` error. The saved guild cache is deleted on login.
+
 ## [1.4.0] - 2026-11-10
 
 ### Added

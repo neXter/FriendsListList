@@ -82,18 +82,17 @@
   <text x="430" y="216" font-size="11.5" fill="#ddd" filter="url(#shadow)">Griff (ziehen zum Verschieben)</text>
 
   <!-- Tooltip beim Hover über Mara: Ort, Notiz, weitere gespeicherte Charaktere -->
-  <rect x="598" y="116" width="156" height="125" rx="4" fill="#0b0b1e" fill-opacity="0.94" stroke="#8a8a9a" stroke-width="1"/>
+  <rect x="598" y="116" width="156" height="110" rx="4" fill="#0b0b1e" fill-opacity="0.94" stroke="#8a8a9a" stroke-width="1"/>
   <text x="608" y="132" font-size="12" font-weight="600" fill="#fff">Mara</text>
-  <text x="608" y="147" font-size="11.5" fill="#40ff40">&lt;Die Nachtwache&gt;</text>
-  <text x="608" y="162" font-size="11.5" fill="#ddd">Orgrimmar</text>
-  <text x="608" y="177" font-size="11.5" fill="#ffd100">Notiz: Tank aus dem Raid</text>
-  <text x="608" y="205" font-size="11" fill="#999">Weitere Charaktere:</text>
-  <text x="608" y="220" font-size="11"><tspan fill="#3FB8AF" font-weight="700">F</tspan> <tspan fill="#FF7C0A" font-weight="600">Thornweb</tspan> <tspan fill="#bbb">(38)</tspan> <tspan fill="#2f9f2f">&lt;Nachtwache&gt;</tspan></text>
-  <text x="608" y="234" font-size="11"><tspan fill="#E8B83A" font-weight="700">R</tspan> <tspan fill="#F48CBA" font-weight="600">Mirela</tspan> <tspan fill="#bbb">(90)</tspan> <tspan fill="#99ccff">Aegwynn</tspan></text>
+  <text x="608" y="147" font-size="11.5" fill="#ddd">Orgrimmar</text>
+  <text x="608" y="162" font-size="11.5" fill="#ffd100">Notiz: Tank aus dem Raid</text>
+  <text x="608" y="190" font-size="11" fill="#999">Weitere Charaktere:</text>
+  <text x="608" y="205" font-size="11"><tspan fill="#3FB8AF" font-weight="700">F</tspan> <tspan fill="#FF7C0A" font-weight="600">Thornweb</tspan> <tspan fill="#bbb">(38)</tspan></text>
+  <text x="608" y="219" font-size="11"><tspan fill="#E8B83A" font-weight="700">R</tspan> <tspan fill="#F48CBA" font-weight="600">Mirela</tspan> <tspan fill="#bbb">(90)</tspan> <tspan fill="#99ccff">Aegwynn</tspan></text>
 
   <!-- Hinweise -->
   <text x="24" y="258" font-size="11.5" fill="#555">Linksklick: Whisper · Rechtsklick: entsperren</text>
-  <text x="24" y="273" font-size="11.5" fill="#555">Hover: Gilde, Ort, Notiz, weitere Charaktere</text>
+  <text x="24" y="273" font-size="11.5" fill="#555">Hover: Ort, Notiz, weitere Charaktere</text>
   <text x="396" y="258" font-size="11.5" fill="#555">Rechtsklick: sperren · Griff ziehen: verschieben</text>
   <text x="24" y="296" font-size="11.5" fill="#555"><tspan fill="#3FB8AF" font-weight="700">F</tspan> = Forever (Türkis #3FB8AF) · <tspan fill="#C9971C" font-weight="700">R</tspan> = Retail (Gold #E8B83A) · Wappen hier vereinfacht, im Spiel Client-Textur</text>
   <text x="24" y="314" font-size="11.5" fill="#555">Charakternamen in echten Klassenfarben (Krieger, Druide, Schamane, Paladin) · Text weiß mit Kontur und Schatten</text>
