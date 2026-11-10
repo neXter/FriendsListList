@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.0] - 2026-11-10
+
+### Added
+
+- The add-on remembers the characters each friend has been seen on (per BattleTag, in the saved variables). The tooltip lists the friend's other characters under "Other characters:": game marker, name in class color, level, and the server name for Retail characters or the mode (PvE, PvP, RP ...) for Forever characters, which have no realms. Most recent first, up to 6 shown, up to 10 saved per friend.
+- Guild in the tooltip, per character. No friend API provides it, so hovering a Forever friend sends a throttled `/who` (one at a time, at least 6 s apart) and caches the guild per character name (24 h; a failed lookup is retried after 10 min). The guild line shows under the friend name and, if known, behind each entry in "Other characters:". Retail friends and offline characters are not looked up. `/fll guild` turns the lookup off.
+- `/fll forget` deletes all saved characters and the guild cache.
+- Debug lines show how many other characters are saved for each friend (`others=N`).
+
 ## [1.2.0] - 2026-11-08
 
 ### Added

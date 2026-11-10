@@ -12,6 +12,8 @@ FriendsListList shows only the friends who are online right now and playing WoW 
 - Per row: game marker, friend name, faction crest, character name in class color, level
 - Sorted from top to bottom: Retail first, then Forever, each alphabetically by BattleTag
 - **Tooltip** on hover: friend name, location (zone or dungeon), realm type in color (PvE green, PvP red, RP-PvE dark green, RP-PvP dark red), the server name for Retail friends, and your Battle.net note, handy for friends whose name does not tell you who they are
+- **Other characters:** the add-on remembers the characters a friend has been seen on and lists the others in the tooltip (most recent first, up to 6 shown, 10 saved per friend). It only knows characters it has seen online while it was installed
+- **Guild** in the tooltip, per character: the game has no friend API for it, so the add-on looks it up with a throttled `/who` when you hover a Forever friend and remembers the result. The guild line appears about a second after the first hover. Retail friends and offline characters cannot be looked up. Turn it off with `/fll guild`
 - **Left click** a row to whisper that friend
 - **Right click** to lock or unlock the list. While unlocked, a small handle appears: drag it to move the list. The position is saved
 - Text with outline and shadow, so it stays readable on any background
@@ -37,6 +39,8 @@ The list is locked by default, and while nobody is online it shows nothing. Type
 | `/fll chars` | Show or hide character friends (default: hidden) |
 | `/fll reset` | Reset the position to the screen center |
 | `/fll names` | Friend names: as shown in game (default) or BattleTag |
+| `/fll guild` | Turn the guild lookup (`/who` on tooltip hover) on or off (default: on) |
+| `/fll forget` | Delete all saved characters and guilds of your friends |
 | `/fll debug` | Toggle debug output in chat |
 | `/fll dump` | Print raw data of all online friends, useful for bug reports |
 | `/fll icon <n>` | Choose a faction crest variant, 0 = automatic |

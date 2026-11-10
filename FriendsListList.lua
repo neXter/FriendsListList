@@ -1,7 +1,7 @@
--- FriendsListList 1.2.0 – minimalistische Online-Freundesliste für WoW Forever (Interface 16001)
+-- FriendsListList 1.4.0 – minimalistische Online-Freundesliste für WoW Forever (Interface 16001)
 -- Autor: neXter
 local ADDON = ...
-local VERSION = "1.2.0"
+local VERSION = "1.4.0"
 local TAG = "|cff3FB8AFFLL|r"
 
 -- Lokalisierung -----------------------------------------------------------
@@ -28,6 +28,13 @@ local EN = {
   NAMES_BT = "Friend names: BattleTag.",
   NAMES_GAME = "Friend names: as shown in game (hidden names fall back to BattleTag).",
   NOTE = "Note",
+  HELP8 = "  /fll forget  –  delete all saved characters of your friends",
+  ALTS = "Other characters:",
+  ALTS_MORE = "+%d more",
+  FORGOT = "Saved characters deleted.",
+  HELP9 = "  /fll guild  –  toggle guild lookup (/who on tooltip hover)",
+  GUILD_ON = "Guild lookup: on (a /who is sent when you hover a Forever friend).",
+  GUILD_OFF = "Guild lookup: off.",
 }
 local DE = {
   READY = "v%s geladen. /fll help zeigt die Befehle.",
@@ -51,6 +58,13 @@ local DE = {
   NAMES_BT = "Freundesnamen: BattleTag.",
   NAMES_GAME = "Freundesnamen: wie im Spiel (versteckte Namen werden zum BattleTag).",
   NOTE = "Notiz",
+  HELP8 = "  /fll forget  –  alle gespeicherten Charaktere der Freunde löschen",
+  ALTS = "Weitere Charaktere:",
+  ALTS_MORE = "+%d weitere",
+  FORGOT = "Gespeicherte Charaktere gelöscht.",
+  HELP9 = "  /fll guild  –  Gildensuche (/who beim Überfahren) ein/aus",
+  GUILD_ON = "Gildensuche: an (beim Überfahren eines Forever-Freundes wird ein /who gesendet).",
+  GUILD_OFF = "Gildensuche: aus.",
 }
 local L = IS_DE and setmetatable(DE, { __index = EN }) or EN
 
@@ -67,6 +81,7 @@ local DEFAULTS = {
   showCharFriends = false,
   debug = false,  -- Debug-Ausgabe im Chat: /fll debug
   nameMode = "game",      -- "game" (Name wie im Spiel) oder "battletag" (/fll names)
+  guild = true,   -- Gilde per /who beim Überfahren nachschlagen: /fll guild
   icon = 0,       -- 0 = automatisch
   point = "CENTER", relPoint = "CENTER", x = 0, y = 0,
 }
@@ -94,8 +109,7 @@ for _, tbl in ipairs({ LOCALIZED_CLASS_NAMES_MALE or {}, LOCALIZED_CLASS_NAMES_F
   for file, name in pairs(tbl) do CLASS_BY_NAME[name] = file end
 end
 
-local function ClassHex(className)
-  local file = className and CLASS_BY_NAME[className]
+local function ClassFileHex(file)
   local c
   if file then
     c = RAID_CLASS_COLORS and RAID_CLASS_COLORS[file]
@@ -106,6 +120,10 @@ local function ClassHex(className)
   if not c then return "|cffffffff" end
   local function byte(v) return math.floor(v * 255 + 0.5) end
   return string.format("|cff%02x%02x%02x", byte(c.r), byte(c.g), byte(c.b))
+end
+
+local function ClassHex(className)
+  return ClassFileHex(className and CLASS_BY_NAME[className])
 end
 
 -- Fraktions-Icons ---------------------------------------------------------
@@ -225,6 +243,97 @@ local function FriendName(acc)
   return acc.accountName
 end
 
+-- Gespeicherte Charaktere -------------------------------------------------
+-- db.alts[battleTag][game .. ":" .. name] = { char, class, classFile, level, game, realm, realmType, seen }
+-- Der BattleTag ist der einzige stabile Schlüssel; Charakterfreunde ohne BattleTag werden nicht gespeichert.
+local MAX_SAVED = 10  -- pro Freund, danach fliegt der am längsten nicht gesehene raus
+local MAX_SHOWN = 6   -- Zeilen im Tooltip
+
+local function AltKey(e) return e.game .. ":" .. Lower(e.char) end
+
+local function RememberChar(e)
+  if not (e.battleTag and e.char and e.char ~= "") then return end
+  db.alts = db.alts or {}
+  local saved = db.alts[e.battleTag]
+  if not saved then saved = {}; db.alts[e.battleTag] = saved end
+  local key = AltKey(e)
+  local c = saved[key] or {}
+  saved[key] = c
+  -- Felder kommen beim Login oder projektübergreifend manchmal leer: dann den gespeicherten Wert behalten
+  c.char, c.game, c.seen = e.char, e.game, time()
+  if e.class and e.class ~= "" then c.class = e.class; c.classFile = CLASS_BY_NAME[e.class] or c.classFile end
+  if e.level and e.level > 0 then c.level = e.level end
+  if e.realm then c.realm = e.realm end
+  if e.realmType then c.realmType = e.realmType end
+  local count, oldestKey, oldest = 0, nil, nil
+  for k, v in pairs(saved) do
+    count = count + 1
+    if k ~= key and (not oldest or v.seen < oldest) then oldestKey, oldest = k, v.seen end
+  end
+  if count > MAX_SAVED then saved[oldestKey] = nil end
+end
+
+-- Andere gespeicherte Charaktere des Freundes, zuletzt gesehene zuerst
+local function OtherChars(e)
+  local list = {}
+  local saved = e.battleTag and db.alts and db.alts[e.battleTag]
+  if not saved then return list end
+  local cur = AltKey(e)
+  for key, c in pairs(saved) do
+    if key ~= cur then list[#list + 1] = c end
+  end
+  table.sort(list, function(a, b)
+    if a.seen ~= b.seen then return a.seen > b.seen end
+    return Lower(a.char) < Lower(b.char)
+  end)
+  return list
+end
+
+-- Gilden-Cache -----------------------------------------------------------
+-- Keine Freunde-API liefert die Gilde, nur /who. Ergebnisse landen in db.guilds[AltKey] = { guild, seen, tried }.
+-- guild = nil + seen: keine Gilde. tried: Suche ohne Treffer (z. B. offline), später erneut versuchen.
+local GUILD_TTL = 86400    -- Sekunden, bis eine bekannte Gilde neu abgefragt wird
+local GUILD_RETRY = 600    -- Sekunden bis zum nächsten Versuch nach erfolgloser Suche
+local GUILD_MAX = 300      -- gespeicherte Charaktere, danach fliegt der älteste raus
+
+local function GuildEntry(e)
+  if not (e and e.game and e.char and e.char ~= "") then return nil end
+  return db.guilds and db.guilds[AltKey(e)]
+end
+
+local function GuildOf(e)
+  local c = GuildEntry(e)
+  return c and c.guild or nil
+end
+
+local function GuildFresh(c, now)
+  if not c then return false end
+  if c.seen and now - c.seen < GUILD_TTL then return true end
+  if c.tried and now - c.tried < GUILD_RETRY then return true end
+  return false
+end
+
+local function StoreGuild(key, guild, found)
+  db.guilds = db.guilds or {}
+  local c = db.guilds[key] or {}
+  db.guilds[key] = c
+  local now = time()
+  if found then
+    c.guild = (guild and guild ~= "") and guild or nil
+    c.seen = now
+    c.tried = nil
+  else
+    c.tried = now
+  end
+  local count, oldestKey, oldest = 0, nil, nil
+  for k, v in pairs(db.guilds) do
+    count = count + 1
+    local t = math.max(v.seen or 0, v.tried or 0)
+    if k ~= key and (not oldest or t < oldest) then oldestKey, oldest = k, t end
+  end
+  if count > GUILD_MAX then db.guilds[oldestKey] = nil end
+end
+
 local function CollectBNet(out, stats)
   local num = BNGetNumFriends and (BNGetNumFriends()) or 0
   stats.bnetTotal = num
@@ -265,7 +374,7 @@ local function CollectBNet(out, stats)
               end
               local friend = FriendName(acc)
               local realm = UsableName(ga.realmDisplayName) or UsableName(ga.realmName)
-              out[#out + 1] = {
+              local entry = {
                 game = game,
                 friend = friend,
                 -- Sortierung nach BattleTag: der echte Name ist ein geschützter Token und nicht sortierbar
@@ -284,6 +393,8 @@ local function CollectBNet(out, stats)
                 note = acc.note,
                 pid = pid,
               }
+              RememberChar(entry)
+              out[#out + 1] = entry
             end
           end
         end
@@ -428,6 +539,8 @@ local function ShowTooltip(row)
   if not e then return end
   GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
   GameTooltip:AddLine(e.friend or e.char or "?", 1, 1, 1)
+  local guild = GuildOf(e)
+  if guild then GameTooltip:AddLine("<" .. guild .. ">", 0.25, 1, 0.25) end
   if e.area and e.area ~= "" then GameTooltip:AddLine(e.area, 0.8, 0.8, 0.8) end
   -- Retail-Freunde: Servername (+ Typ), Forever-Freunde: nur Realm-Typ
   local server = e.game == "R" and e.realm or nil
@@ -438,7 +551,135 @@ local function ShowTooltip(row)
   else serverLine = typeText end
   if serverLine then GameTooltip:AddLine(serverLine, 1, 1, 1) end
   if e.note and e.note ~= "" then GameTooltip:AddLine(e.note, 1, 0.82, 0, true) end
+  local others = OtherChars(e)
+  if #others > 0 then
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(L.ALTS, 0.6, 0.6, 0.6)
+    for i = 1, math.min(#others, MAX_SHOWN) do
+      local c = others[i]
+      local parts = { c.game == "F" and GAME_F or GAME_R, (c.classFile and ClassFileHex(c.classFile) or ClassHex(c.class)) .. c.char .. "|r" }
+      if c.level and c.level > 0 then parts[#parts + 1] = "|cffbbbbbb(" .. c.level .. ")|r" end
+      -- Retail: Servername. Forever hat keine Realms, dort steht der Modus (PvE, PvP, RP ...)
+      if c.game == "R" then
+        if c.realm then parts[#parts + 1] = "|cff99ccff" .. c.realm .. "|r" end
+      elseif c.realmType then
+        parts[#parts + 1] = RealmTypeHex(c.realmType) .. c.realmType .. "|r"
+      end
+      local g = GuildOf(c)
+      if g then parts[#parts + 1] = "|cff2f9f2f<" .. g .. ">|r" end
+      GameTooltip:AddLine(table.concat(parts, " "), 1, 1, 1)
+    end
+    if #others > MAX_SHOWN then
+      GameTooltip:AddLine(L.ALTS_MORE:format(#others - MAX_SHOWN), 0.6, 0.6, 0.6)
+    end
+  end
   GameTooltip:Show()
+end
+
+-- Gildensuche per /who ----------------------------------------------------
+-- Beim Überfahren eines Forever-Freundes ohne frischen Cache wird ein /who gesendet (gedrosselt, eine Anfrage zur Zeit).
+-- Wie LibWho: Ergebnisse nur als Event lesen, das Blizzard-Freundesfenster hört währenddessen nicht auf WHO_LIST_UPDATE.
+local WHO_INTERVAL = 6   -- Sekunden zwischen zwei Anfragen
+local WHO_TIMEOUT = 8
+local hoverRow
+local guildQueue, guildQueued = {}, {}
+local whoPending, whoSeq, lastWhoAt, pumpScheduled, uiSuspended = nil, 0, 0, false, false
+local PumpGuildQueue
+
+local function WhoApiOk()
+  return C_FriendList and C_FriendList.SendWho and C_FriendList.GetNumWhoResults and C_FriendList.GetWhoInfo
+end
+
+local function SuspendWhoUI()
+  if FriendsFrame and FriendsFrame.IsEventRegistered and FriendsFrame:IsEventRegistered("WHO_LIST_UPDATE") then
+    FriendsFrame:UnregisterEvent("WHO_LIST_UPDATE")
+    uiSuspended = true
+  end
+end
+
+local function FinishWho()
+  whoPending = nil
+  if uiSuspended then
+    uiSuspended = false
+    FriendsFrame:RegisterEvent("WHO_LIST_UPDATE")
+  end
+  if C_FriendList and C_FriendList.SetWhoToUi then pcall(C_FriendList.SetWhoToUi, false) end
+end
+
+PumpGuildQueue = function()
+  if whoPending or pumpScheduled or #guildQueue == 0 then return end
+  if not (db.guild and WhoApiOk()) then guildQueue, guildQueued = {}, {}; return end
+  local wait = WHO_INTERVAL - (GetTime() - lastWhoAt)
+  if wait > 0 then
+    pumpScheduled = true
+    C_Timer.After(wait, function() pumpScheduled = false; PumpGuildQueue() end)
+    return
+  end
+  local item = table.remove(guildQueue, 1)
+  guildQueued[item.key] = nil
+  if GuildFresh(db.guilds and db.guilds[item.key], time()) then return PumpGuildQueue() end
+  -- Nicht dazwischenfunken, wenn der Spieler gerade selbst im Who-Reiter sucht
+  if WhoFrame and WhoFrame.IsShown and WhoFrame:IsShown() then return end
+  whoPending = item
+  whoSeq = whoSeq + 1
+  local seq = whoSeq
+  lastWhoAt = GetTime()
+  SuspendWhoUI()
+  local ok, err = pcall(function()
+    if C_FriendList.SetWhoToUi then C_FriendList.SetWhoToUi(true) end
+    C_FriendList.SendWho('n-"' .. item.char .. '"')
+  end)
+  if not ok then
+    Dbg("guild: SendWho failed for %s: %s", item.char, err)
+    StoreGuild(item.key, nil, false)
+    FinishWho()
+    return
+  end
+  Dbg("guild: /who sent for %s", item.char)
+  C_Timer.After(WHO_TIMEOUT, function()
+    if whoPending and whoSeq == seq then
+      Dbg("guild: no answer for %s (timeout)", item.char)
+      StoreGuild(item.key, nil, false)
+      FinishWho()
+      PumpGuildQueue()
+    end
+  end)
+end
+
+local function RequestGuild(e)
+  if not (db.guild and e and e.game == "F" and e.char and e.char ~= "" and WhoApiOk()) then return end
+  local key = AltKey(e)
+  if guildQueued[key] or (whoPending and whoPending.key == key) then return end
+  if GuildFresh(db.guilds and db.guilds[key], time()) then return end
+  table.insert(guildQueue, 1, { key = key, char = e.char })  -- zuletzt überfahrener Freund zuerst
+  guildQueued[key] = true
+  while #guildQueue > 5 do
+    local dropped = table.remove(guildQueue)
+    guildQueued[dropped.key] = nil
+  end
+  PumpGuildQueue()
+end
+
+local function OnWhoUpdate()
+  if not whoPending then return end
+  local item = whoPending
+  local want = Lower(item.char)
+  local num = C_FriendList.GetNumWhoResults() or 0
+  local found
+  for i = 1, num do
+    local info = C_FriendList.GetWhoInfo(i)
+    if info and Lower((info.fullName or ""):match("^[^-]+")) == want then found = info; break end
+  end
+  -- Treffer, aber nicht unser Charakter: vermutlich eine /who des Spielers, auf unsere Antwort weiter warten
+  if not found and num > 0 then return end
+  Dbg("guild: result for %s -> %s (results=%d)", item.char,
+    found and (found.fullGuildName ~= "" and found.fullGuildName or "no guild") or "not found", num)
+  StoreGuild(item.key, found and found.fullGuildName, found ~= nil)
+  FinishWho()
+  if hoverRow and hoverRow.entry and hoverRow.entry.char and AltKey(hoverRow.entry) == item.key then
+    ShowTooltip(hoverRow)
+  end
+  PumpGuildQueue()
 end
 
 local function GetRow(k)
@@ -474,10 +715,13 @@ local function GetRow(k)
   end)
   row:SetScript("OnEnter", function(self)
     if not db.locked then self.hl:Show() end
+    hoverRow = self
     ShowTooltip(self)
+    RequestGuild(self.entry)
   end)
   row:SetScript("OnLeave", function(self)
     self.hl:Hide()
+    if hoverRow == self then hoverRow = nil end
     GameTooltip:Hide()
   end)
   rows[k] = row
@@ -505,10 +749,10 @@ end
 local lastSignature
 
 local function DescribeEntry(e)
-  return string.format("  %s %s (%s) | char=%s lvl=%s class=%s faction=%s area=%s realm=%s type=%s pid=%s note=%s btFriend=%s acct=%s",
+  return string.format("  %s %s (%s) | char=%s lvl=%s class=%s faction=%s area=%s realm=%s type=%s pid=%s note=%s btFriend=%s acct=%s guild=%s others=%d",
     e.game, tostring(e.friend or "-"), tostring(e.battleTag or "-"), tostring(e.char), tostring(e.level), tostring(e.class),
     tostring(e.faction), tostring(e.area), tostring(e.realm), tostring(e.realmType), tostring(e.pid),
-    (e.note and e.note ~= "") and "yes" or "no", tostring(e.btFriend), tostring(e.acctRaw))
+    (e.note and e.note ~= "") and "yes" or "no", tostring(e.btFriend), tostring(e.acctRaw), tostring(GuildOf(e)), #OtherChars(e))
 end
 
 local function DoRefresh()
@@ -564,6 +808,10 @@ local function DebugBanner()
     Has(ChatFrame_SendBNetTell or (ChatFrameUtil and ChatFrameUtil.SendBNetTell)),
     Has(ChatFrame_SendTell or (ChatFrameUtil and ChatFrameUtil.SendTell)),
     Has(C_ClassColor), Has(C_Texture and C_Texture.GetAtlasInfo))
+  Dbg("API: SendWho=%s GetNumWhoResults=%s GetWhoInfo=%s SetWhoToUi=%s FriendsFrame=%s | guild lookup: %s",
+    Has(C_FriendList and C_FriendList.SendWho), Has(C_FriendList and C_FriendList.GetNumWhoResults),
+    Has(C_FriendList and C_FriendList.GetWhoInfo), Has(C_FriendList and C_FriendList.SetWhoToUi),
+    Has(FriendsFrame), db.guild and "on" or "off")
   Dbg("friend names: %s", db.nameMode)
   local idx = ActiveIconIndex()
   Dbg("faction icon: variant %s (%s)%s | atlas horde=%s alliance=%s", idx, ICONS[idx].name,
@@ -604,7 +852,7 @@ end
 -- Slash-Befehle -----------------------------------------------------------
 local function Help()
   Print(L.HELP:format(VERSION))
-  for _, k in ipairs({ "HELP1", "HELP2", "HELP3", "HELP4", "HELP5", "HELP6", "HELP7" }) do
+  for _, k in ipairs({ "HELP1", "HELP2", "HELP3", "HELP4", "HELP5", "HELP6", "HELP7", "HELP8", "HELP9" }) do
     DEFAULT_CHAT_FRAME:AddMessage(L[k])
   end
 end
@@ -634,6 +882,15 @@ SlashCmdList.FRIENDSLISTLIST = function(msg)
     Print(db.nameMode == "game" and L.NAMES_GAME or L.NAMES_BT)
     lastSignature = nil
     RequestRefresh()
+  elseif cmd == "guild" then
+    db.guild = not db.guild
+    Print(db.guild and L.GUILD_ON or L.GUILD_OFF)
+  elseif cmd == "forget" then
+    db.alts = {}
+    db.guilds = {}
+    Print(L.FORGOT)
+    lastSignature = nil
+    RequestRefresh() -- der aktuelle Charakter jedes Freundes wird sofort wieder gemerkt
   elseif cmd == "dump" then
     Dump()
   elseif cmd == "icon" then
@@ -660,11 +917,15 @@ local events = CreateFrame("Frame")
 local EVENT_LIST = {
   "BN_FRIEND_ACCOUNT_ONLINE", "BN_FRIEND_ACCOUNT_OFFLINE", "BN_FRIEND_INFO_CHANGED",
   "BN_CONNECTED", "BN_FRIEND_LIST_SIZE_CHANGED", "FRIENDLIST_UPDATE", "PLAYER_ENTERING_WORLD",
+  "WHO_LIST_UPDATE",
 }
 
 events:RegisterEvent("PLAYER_LOGIN")
 events:SetScript("OnEvent", function(_, event)
-  if event == "PLAYER_LOGIN" then
+  if event == "WHO_LIST_UPDATE" then
+    local ok, err = pcall(OnWhoUpdate)
+    if not ok then Print("|cffff4040error:|r " .. tostring(err)) end
+  elseif event == "PLAYER_LOGIN" then
     FriendsListListDB = FriendsListListDB or {}
     db = FriendsListListDB
     for k, v in pairs(DEFAULTS) do
